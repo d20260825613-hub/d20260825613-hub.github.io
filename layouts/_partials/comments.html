@@ -1,0 +1,79 @@
+{{- /*
+  giscus 评论组件。
+
+  为什么需要这个文件：PaperMod 自带的 layouts/_partials/comments.html 是一个**空占位**
+  （只有三行注释，见 https://github.com/adityatelange/hugo-PaperMod 的评论文档），
+  任何评论系统都要自己实现。Hugo 的查找顺序是「项目 layouts 优先于主题 layouts」，
+  所以这个同名文件会覆盖主题里的空壳，不需要改 themes/ 下的任何东西——
+  这也让主题升级不会和定制冲突。
+
+  参数来源：hugo.yaml 的 params.giscus。ID 是 GraphQL 取回的真实值，
+  不是 giscus.app 生成的占位符（见 README）。
+
+  渲染条件：只有在两个 ID 都配置了、且文章没有显式关掉 comments 时才输出。
+  这样没装 giscus App 时页面只是没有评论区，不会出现一个加载失败的空白框。
+*/ -}}
+
+{{- $g := site.Params.giscus | default dict -}}
+{{- $repo := index $g "repo" -}}
+{{- $repoId := index $g "repoId" -}}
+{{- $category := index $g "category" -}}
+{{- $categoryId := index $g "categoryId" -}}
+
+{{- if and $repo $repoId $categoryId -}}
+<div class="comments" id="comments">
+  <script
+    src="https://giscus.app/client.js"
+    data-repo="{{ $repo }}"
+    data-repo-id="{{ $repoId }}"
+    data-category="{{ $category }}"
+    data-category-id="{{ $categoryId }}"
+    data-mapping="{{ index $g "mapping" | default "pathname" }}"
+    data-strict="{{ index $g "strict" | default "0" }}"
+    data-reactions-enabled="{{ index $g "reactionsEnabled" | default "1" }}"
+    data-emit-metadata="{{ index $g "emitMetadata" | default "0" }}"
+    data-input-position="{{ index $g "inputPosition" | default "top" }}"
+    data-theme="preferred_color_scheme"
+    data-lang="{{ index $g "lang" | default "zh-CN" }}"
+    data-loading="{{ index $g "loading" | default "lazy" }}"
+    crossorigin="anonymous"
+    async>
+  </script>
+  <noscript>评论由 giscus 提供，需要启用 JavaScript，并使用 GitHub 账号登录。</noscript>
+</div>
+
+{{- /* PaperMod 的主题切换是给 <html> 加 class（而非 data-theme），
+       所以这里监听 <html> 的 class 变化，把 dark/light 同步给 giscus 的 iframe。
+       不监听的话，切换主题后评论区仍是旧配色。 */ -}}
+<script>
+  (function () {
+    var comments = document.getElementById('comments');
+    if (!comments) return;
+    var frame = null;
+
+    function sync() {
+      if (!frame) frame = comments.querySelector('iframe.giscus-frame');
+      if (!frame) return;
+      var isDark = document.documentElement.classList.contains('dark');
+      frame.contentWindow.postMessage(
+        { giscus: { setConfig: { theme: isDark ? 'dark' : 'light' } } },
+        'https://giscus.app'
+      );
+    }
+
+    // giscus 通过 postMessage 打招呼；收到后同步一次当前主题
+    window.addEventListener('message', function (event) {
+      if (event.origin !== 'https://giscus.app') return;
+      if (!event.data || !event.data.giscus) return;
+      frame = frame || comments.querySelector('iframe.giscus-frame');
+      sync();
+    });
+
+    new MutationObserver(function (mutations) {
+      for (var i = 0; i < mutations.length; i++) {
+        if (mutations[i].attributeName === 'class') { sync(); return; }
+      }
+    }).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+  })();
+</script>
+{{- end -}}
