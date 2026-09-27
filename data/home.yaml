@@ -1,0 +1,103 @@
+# 主页内容 · 改这里就能改首页，不用碰模板
+#
+# 这个文件驱动 layouts/list.html 渲染的首页（仅首页，不影响文章页/列表页/搜索/评论）。
+# 想换文字、加项目、改联系方式，只改本文件即可。
+
+profile:
+  # 昵称 / 站名（首屏大标题）
+  name: "堆栈手记"
+  # 副标题：一句话说明这是谁、做什么
+  role: "独立工具开发者"
+  # 个人简介：围绕 CLI 工具、开发效率、自动化脚本、网络诊断、文件整理
+  bio: >-
+    个人开源工具箱。我把日常反复遇到的麻烦写成零依赖的命令行工具 ——
+    磁盘与文件整理、网络诊断、局域网文件互传、表格处理与自动化脚本。
+    每个工具都能用 npx 直接跑，不引入第三方依赖，也不碰 eval。
+  # 头像：把真实图片放到 static/images/avatar.webp（或 .jpg/.png）即会自动使用；
+  # 没有该文件时回退到 static/images/avatar-placeholder.svg
+  avatar: "/images/avatar.webp"
+  avatarFallback: "/images/avatar-placeholder.svg"
+  # 头像上的首字（仅占位图使用）
+  initials: "堆"
+
+# 联系方式：显示在首屏，邮箱可点击直接发信
+contact:
+  email: "contact@example.com"
+  location: "China · UTC+8"
+  status: "持续维护中"
+  # 这些会渲染成首屏下方的一排标签（chip）
+  chips:
+    - label: "邮箱"
+      value: "contact@example.com"
+      href: "mailto:contact@example.com"
+      icon: "mail"
+    - label: "所在地"
+      value: "China · UTC+8"
+      icon: "pin"
+    - label: "状态"
+      value: "持续维护中"
+      icon: "pulse"
+
+# 社交入口（按钮）
+links:
+  - label: "GitHub"
+    href: "https://github.com/d20260825613-hub"
+    icon: "github"
+  - label: "博客"
+    href: "/posts/"
+    icon: "book"
+  - label: "RSS"
+    href: "/index.xml"
+    icon: "rss"
+  - label: "写邮件"
+    href: "mailto:contact@example.com"
+    icon: "mail"
+
+# 项目卡片。status 建议只用三种，样式表按 status-<值> 着色：
+#   active   绿色  持续维护
+#   stable   蓝色  可用，只在必要时改
+#   planned  灰色  计划中
+projects:
+  - name: "netpeek"
+    tagline: "扫出局域网里到底有什么：活着的主机、开放的 TCP 端口、每个 MAC 背后的厂商。"
+    status: "active"
+    statusLabel: "维护中"
+    icon: "radar"
+    repo: "https://github.com/d20260825613-hub/netpeek"
+    meta: "91 测试 · 零依赖"
+    tags: ["网络诊断", "端口扫描", "ARP"]
+  - name: "dropjar"
+    tagline: "把文件夹变成局域网网页，手机扫码即可双向传文件。不用账号、不用云、不用数据线。"
+    status: "active"
+    statusLabel: "维护中"
+    icon: "transfer"
+    repo: "https://github.com/d20260825613-hub/dropjar"
+    meta: "84 测试 · 自写二维码"
+    tags: ["文件传输", "局域网", "HTTP"]
+  - name: "tabkit"
+    tagline: "看一眼表格的列、在 CSV/JSON/Markdown 之间互转、用表达式筛行，全程不碰 eval。"
+    status: "active"
+    statusLabel: "维护中"
+    icon: "table"
+    repo: "https://github.com/d20260825613-hub/tabkit"
+    meta: "148 测试 · 零依赖"
+    tags: ["数据处理", "CSV", "自动化"]
+  - name: "spacehog"
+    tagline: "审计目录树里到底是什么在占地方：重复文件、大文件、垃圾文件、稀疏文件、空目录。"
+    status: "stable"
+    statusLabel: "稳定"
+    icon: "disk"
+    repo: "https://github.com/d20260825613-hub/spacehog"
+    meta: "130 测试 · 含 Windows 二进制"
+    tags: ["磁盘整理", "重复文件", "审计"]
+
+# 背景图（首屏底图）。换图就替换 static/images/ 下这两个文件
+background:
+  image: "/images/hero-bg.jpg"
+  imageMobile: "/images/hero-bg-mobile.jpg"
+  # 遮罩强度：越大文字越清楚、图片越淡。0.55 ~ 0.8 之间比较合适
+  overlay: 0.68
+
+# 首页底部：最新文章条数（0 表示不显示这一段）
+recentPosts: 3
+recentPostsTitle: "最新文章"

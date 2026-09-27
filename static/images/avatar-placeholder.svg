@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="avatar">
+  <defs>
+    <linearGradient id="avBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0e7490"/>
+      <stop offset="55%" stop-color="#1e3a8a"/>
+      <stop offset="100%" stop-color="#312e81"/>
+    </linearGradient>
+    <radialGradient id="avGlow" cx="30%" cy="22%" r="80%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.34"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <circle cx="128" cy="128" r="128" fill="url(#avBg)"/>
+  <circle cx="128" cy="128" r="128" fill="url(#avGlow)"/>
+
+  <!-- 占位图形：一叠"层"，呼应工具箱里都是分层的小工具 -->
+  <g fill="none" stroke="#ffffff" stroke-opacity="0.9" stroke-width="9"
+     stroke-linecap="round" stroke-linejoin="round">
+    <path d="M64 108 L128 76 L192 108 L128 140 Z" fill="#ffffff" fill-opacity="0.14"/>
+    <path d="M64 136 L128 168 L192 136"/>
+    <path d="M64 164 L128 196 L192 164"/>
+  </g>
+</svg>

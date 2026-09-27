@@ -1,0 +1,163 @@
+{{- /*
+  首页模板 —— 个人开源工具箱主页。
+
+  为什么放在 layouts/list.html：Hugo 的模板查找里，项目 layouts/ 优先于主题
+  layouts/，而 PaperMod 的首页渲染就在它的 layouts/list.html 里（判断 .IsHome）。
+  同名覆盖之后，其余页面（文章页 single.html、标签 taxonomy.html、搜索、归档、
+  404）完全不受影响，themes/ 一个字节都不用改，主题升级也不会冲突。
+
+  只定义 "main" 块：PaperMod 的 baseof.html 提供了 <head>（含样式与搜索脚本）、
+  <header> 导航、<footer>，所以这里不重复造这些，导航/主题切换/搜索按钮全部照旧。
+
+  内容全部来自 data/home.yaml，改文字不用动模板。
+*/ -}}
+
+{{- define "main" }}
+{{- /* hugo.Data，不是 .Site.Data：后者在 Hugo 0.156 起已废弃 */ -}}
+{{- $home := hugo.Data.home }}
+{{- $profile := $home.profile }}
+{{- $bg := $home.background }}
+
+{{- /* 背景图：文件不存在时跳过，页面仍可用（不出现空 img 或 404 请求） */ -}}
+{{- $bgPath := "" }}
+{{- with $bg.image }}{{ if fileExists (printf "static%s" .) }}{{ $bgPath = . }}{{ end }}{{ end }}
+{{- $bgMobile := "" }}
+{{- with $bg.imageMobile }}{{ if fileExists (printf "static%s" .) }}{{ $bgMobile = . }}{{ end }}{{ end }}
+
+{{- /* 只把"图片路径"和"遮罩强度"作为自定义属性传进去；
+       渐变、位置、响应式换图都在样式表里，模板里不做算术。 */ -}}
+<div class="home{{ if $bgPath }} home-has-bg{{ end }}"
+     {{- if $bgPath }} style="--home-bg: url('{{ $bgPath | relURL }}');{{ with $bgMobile }}--home-bg-mobile: url('{{ . | relURL }}');{{ end }}--home-bg-overlay: {{ $bg.overlay | default 0.68 }};"{{ end }}>
+
+  {{- /* 首页恒定深色（原因见 assets/css/extended/home.css 顶部注释）。
+         这层固定底把 body 的主题背景盖住，否则亮色主题下浅色会在首屏之外露出来。 */ -}}
+  <div class="home-page-bg" aria-hidden="true"></div>
+
+  {{- /* 背景图层：单独一个元素而不是 body 背景，便于控制高度与移动端换图 */ -}}
+  {{- if $bgPath }}
+  <div class="home-bg" aria-hidden="true"></div>
+  {{- end }}
+
+  {{- /* ---------------------------------------------------------------- 首屏 */ -}}
+  <section class="home-hero">
+    <div class="home-avatar-wrap">
+      {{- /* 优先用真实头像；没有该文件时回退到占位图。
+             换头像：把图片放到 static/images/avatar.webp 即可，无需改代码。 */ -}}
+      {{- $avatar := $profile.avatar }}
+      {{- $fallback := $profile.avatarFallback | default "/images/avatar-placeholder.svg" }}
+      {{- $avatarExists := false }}
+      {{- with $avatar }}{{ if fileExists (printf "static%s" .) }}{{ $avatarExists = true }}{{ end }}{{ end }}
+      <img class="home-avatar"
+           src="{{ if $avatarExists }}{{ $avatar | relURL }}{{ else }}{{ $fallback | relURL }}{{ end }}"
+           alt="{{ $profile.name }} 的头像"
+           width="160" height="160" loading="eager" decoding="async">
+    </div>
+
+    <div class="home-intro">
+      <p class="home-eyebrow">{{ $profile.role }}</p>
+      <h1 class="home-name">{{ $profile.name }}</h1>
+      <p class="home-bio">{{ $profile.bio }}</p>
+
+      {{- with $home.contact.chips }}
+      <ul class="home-meta">
+        {{- range . }}
+        <li class="home-chip{{ if .href }} home-chip-link{{ end }}">
+          {{ partial "svg-icon.html" (dict "name" (.icon | default "dot") "class" "chip-icon") }}
+          {{- if .href }}
+          <a href="{{ .href }}">{{ .value }}</a>
+          {{- else }}
+          <span>{{ .value }}</span>
+          {{- end }}
+        </li>
+        {{- end }}
+      </ul>
+      {{- end }}
+
+      {{- with $home.links }}
+      <nav class="home-links" aria-label="联系与订阅">
+        {{- range . }}
+        <a class="home-link" href="{{ .href }}"{{ if hasPrefix .href "http" }} rel="noopener"{{ end }}>
+          {{ partial "svg-icon.html" (dict "name" (.icon | default "link") "class" "link-icon") }}
+          <span>{{ .label }}</span>
+        </a>
+        {{- end }}
+      </nav>
+      {{- end }}
+    </div>
+  </section>
+
+  {{- /* ------------------------------------------------------------ 项目卡片 */ -}}
+  {{- with $home.projects }}
+  <section class="home-section" id="projects">
+    <header class="home-section-head">
+      <h2>开源项目</h2>
+      <a class="home-section-more" href="https://github.com/d20260825613-hub" rel="noopener">全部仓库 →</a>
+    </header>
+
+    <div class="home-projects">
+      {{- range . }}
+      <article class="project-card">
+        <div class="project-top">
+          <span class="project-icon" aria-hidden="true">
+            {{ partial "svg-icon.html" (dict "name" (.icon | default "box") "class" "icon") }}
+          </span>
+          <span class="project-tag status-{{ .status | default "active" }}">{{ .statusLabel | default "维护中" }}</span>
+        </div>
+
+        <h3 class="project-name">
+          <a href="{{ .repo }}" rel="noopener">{{ .name }}</a>
+        </h3>
+        <p class="project-tagline">{{ .tagline }}</p>
+
+        {{- with .meta }}<p class="project-meta">{{ . }}</p>{{ end }}
+
+        {{- with .tags }}
+        <ul class="project-tags">
+          {{- range . }}<li>{{ . }}</li>{{ end }}
+        </ul>
+        {{- end }}
+
+        <a class="project-link" href="{{ .repo }}" rel="noopener" aria-label="打开 {{ .name }} 的 GitHub 仓库">
+          GitHub
+          {{ partial "svg-icon.html" (dict "name" "arrow" "class" "icon-arrow") }}
+        </a>
+      </article>
+      {{- end }}
+    </div>
+  </section>
+  {{- end }}
+
+  {{- /* ------------------------------------------------------------ 最新文章 */ -}}
+  {{- $count := $home.recentPosts | default 0 }}
+  {{- if gt $count 0 }}
+  {{- $posts := first $count (where site.RegularPages "Type" "in" (slice "posts" "notes")) }}
+  {{- with $posts }}
+  <section class="home-section">
+    <header class="home-section-head">
+      <h2>{{ $home.recentPostsTitle | default "最新文章" }}</h2>
+      <a class="home-section-more" href="{{ "/posts/" | relURL }}">全部文章 →</a>
+    </header>
+
+    <ul class="home-posts">
+      {{- range . }}
+      <li class="post-row">
+        <a class="post-row-title" href="{{ .RelPermalink }}">{{ .Title }}</a>
+        <span class="post-row-meta">
+          <time datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date.Format "2006-01-02" }}</time>
+          {{- if .ReadingTime }} · {{ .ReadingTime }} 分钟{{ end }}
+        </span>
+      </li>
+      {{- end }}
+    </ul>
+  </section>
+  {{- end }}
+  {{- end }}
+
+  {{- /* 首页正文（首页没有 _index.md，这里是给将来留的入口，不需要可删） */ -}}
+  {{- if and .Content (not (.Param "hideHomeContent")) }}
+  <section class="home-section home-content md-content">
+    {{ .Content }}
+  </section>
+  {{- end }}
+</div>
+{{- end }}

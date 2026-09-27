@@ -1,0 +1,698 @@
+/* =====================================================================
+   首页样式 —— 个人开源工具箱主页
+   =====================================================================
+
+   放在 assets/css/extended/ 下的文件会被 PaperMod 的 head.html 自动合并进主样式表
+   （它用 resources.Match "css/extended/*.css" 再 Concat），所以不需要改主题任何文件，
+   也不会和主题升级冲突。
+
+   配色策略：
+     - 强调色是青蓝（--home-accent），与深色背景对比度高
+     - 页面表面（卡片、chip）用主题变量 --entry / --border / --primary，
+       所以亮色主题下自动变成浅色卡片，不需要为亮色另写一套
+     - 首屏那层背景图遮罩固定是深色：图片本身是夜景，亮色主题下压成白底反而更糟
+
+   类名约定（便于以后替换视觉而不动结构）：
+     .home .home-bg .home-hero .home-avatar .home-name .home-bio .home-meta .home-chip
+     .home-links .home-link .home-section .home-projects .project-card .project-icon
+     .project-tag.status-* .project-name .project-tagline .project-meta .project-tags
+     .home-posts .post-row
+   ===================================================================== */
+
+.home {
+    /* 背景图遮罩强度。默认值；首页模板会用内联 style 按 data/home.yaml 覆盖。
+       放在这里是为了让"没配背景图"时也有一个安全默认值。 */
+    --home-bg-overlay: 0.68;
+
+    /* ------------------------------------------------------------------
+       首页恒定深色。
+
+       为什么不让它跟随亮/暗主题：这个页面是作品集门面，需求就是"深色科技感"。
+       跟随主题会带来两个具体问题 ——
+         1. 亮色主题下背景图（夜景）与白底撞在一起，淡出位置会留下一条硬边；
+         2. 深色遮罩 + 浅色表面 = 灰蒙蒙的中间调，既不好看也不够对比。
+       所以在 .home 上直接把 PaperMod 的主题变量改写成深色一组，首页在
+       任何主题下、任何系统偏好下都是同一个样子。文章页/列表页/搜索页不受影响，
+       仍正常跟随主题切换。
+
+       如果你确实想让首页跟随主题，删掉下面这段变量覆盖即可 ——
+       其余样式全部基于这些变量书写，不需要改别的地方。
+       ------------------------------------------------------------------ */
+    --theme: rgb(15, 18, 24);
+    --entry: rgba(24, 29, 38, 0.72);
+    --primary: rgb(233, 238, 245);
+    --secondary: rgb(160, 172, 188);
+    --tertiary: rgb(60, 68, 82);
+    --content: rgb(206, 214, 226);
+    --code-block-bg: rgb(28, 32, 41);
+    --code-bg: rgb(32, 37, 47);
+    --border: rgba(148, 163, 184, 0.2);
+    color-scheme: dark;
+
+    --home-accent: #22d3ee;
+    --home-accent-2: #34d399;
+    --home-ink: var(--primary);
+    --home-muted: var(--secondary);
+    --home-surface: var(--entry);
+    --home-line: var(--border);
+    /* 首页自己的底色，用于背景图淡出与首屏分界线。写死而不是取 --theme，
+       因为 :root 上的 --theme 会随主题变化，而首页恒定深色。 */
+    --home-base: rgb(15, 18, 24);
+    --home-radius: 14px;
+    --home-maxw: 1080px;
+
+    position: relative;
+    /* 首屏往下留一点呼吸，底部给 footer 让位 */
+    padding-bottom: 8px;
+}
+
+/* ---------------------------------------------------------------- 布局宽度 */
+/* PaperMod 的 .main 上限是 720px，而首页信息量更大（首屏 + 四张卡片）。
+   这里把 .main 放宽，并让 .home 自己撑满视口宽度。
+   关键：横向溢出必须裁掉 —— 下面 .home-bg / .home::before 用 100vw 做通栏，
+   不裁的话窄屏会出现横向滚动、内容被推出去。 */
+body:has(.home) .main {
+    max-width: none;
+    width: 100%;
+    padding: 0;
+}
+
+.home {
+    width: 100%;
+    /* clip 而不是 hidden：hidden 会创建滚动容器，影响 fixed 定位的后代。 */
+    overflow-x: clip;
+}
+
+/* 硬约束：首页任何直接子元素都不得超过视口宽度。
+   为什么需要这一道：背景层与首屏用了通栏宽度，加上 .main 的主题宽度上限，
+   在窄屏上很容易出现"内容比视口宽"而右侧被裁掉。与其逐个元素找原因，
+   不如在容器层一次性杜绝横向溢出。 */
+.home > * {
+    max-width: 100%;
+}
+
+/* 长英文/URL、行内代码在窄屏上要能断行，否则会把整块内容撑宽 */
+.home-bio,
+.project-tagline,
+.project-meta,
+.post-row-title {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+/* ---------------------------------------------------------------- 背景图 */
+/* 用独立元素承载背景，并且是 absolute + 固定高度，而不是 position:fixed。
+   教训：最初写成 fixed，结果图在整个视口里一直存在，滚到项目卡片时还会透出来，
+   而为了挡住它给 .home 加实色底，又在亮色主题下变成一块白色面板。
+   现在图只包住首屏那一段，往下自然结束 —— 与主题色无关，也与页面总高无关。 */
+.home-bg {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    /* 比视口略宽，避免两侧露出页面底色（配合 .home 的 overflow-x: clip 裁掉多余部分） */
+    width: 100vw;
+    height: 560px;
+    max-height: 82vh;
+    background-image: var(--home-bg);
+    background-size: cover;
+    background-position: center 32%;
+    background-repeat: no-repeat;
+    z-index: -1;
+    pointer-events: none;
+}
+
+/* 遮罩：既要把图压暗到文字能读，又要让画面本身看得出来。
+   做法是"左暗右亮"的不对称遮罩 —— 首屏文字在左侧，右侧是插画主体（伞与人物），
+   这样文字区域足够暗，而图不会整体被压成黑底。
+   overlay 值由 data/home.yaml 控制，默认 0.68；越大文字越清楚、图片越淡。 */
+.home-bg::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        /* 左侧（文字区）压得更暗，避免正文糊在亮部上 */
+        linear-gradient(100deg,
+            rgba(6, 10, 18, calc(var(--home-bg-overlay) + 0.14)) 0%,
+            rgba(6, 10, 18, calc(var(--home-bg-overlay) + 0.02)) 42%,
+            rgba(6, 10, 18, calc(var(--home-bg-overlay) - 0.12)) 100%),
+        /* 上下渐变：顶部接住导航，底部溶进页面背景，中间留出画面 */
+        linear-gradient(180deg,
+            rgba(6, 10, 18, calc(var(--home-bg-overlay) + 0.08)) 0%,
+            rgba(6, 10, 18, calc(var(--home-bg-overlay) - 0.16)) 38%,
+            rgba(6, 10, 18, var(--home-bg-overlay)) 76%,
+            rgba(6, 10, 18, 0.98) 100%);
+}
+
+/* 首屏的淡出：底部逐渐溶成首页底色，让图自然结束而不是留一条硬边。
+   之后的内容（项目卡片、文章列表）落在页面背景上，对比度稳定。
+   高度必须与 .home-bg 完全一致，否则淡出之前图就被截断了。 */
+.home::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100vw;
+    height: 560px;
+    max-height: 82vh;
+    z-index: -1;
+    pointer-events: none;
+    background: linear-gradient(180deg,
+        rgba(15, 18, 24, 0) 0%,
+        rgba(15, 18, 24, 0) 30%,
+        rgba(15, 18, 24, 0.5) 42%,
+        rgba(15, 18, 24, 0.9) 52%,
+        var(--home-base) 60%,
+        var(--home-base) 100%);
+}
+
+/* 背景图结束后，用首页底色盖住 body 的主题背景，让整页下半部分统一。
+   因为首页恒定深色，而 :root 的 --theme 在亮色主题下是白的。 */
+.home-page-bg {
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    pointer-events: none;
+    background: var(--home-base);
+}
+
+/* 导航栏统一成首页底色，避免顶部留一条与下方不一致的条。
+   链接颜色也一起定死，否则亮色主题下会出现"深底 + 深字"看不清。
+   只在首页生效（:has），文章页导航仍跟随主题。 */
+body:has(.home-has-bg) .header {
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    background: color-mix(in srgb, #0f1218 88%, transparent);
+    border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+body:has(.home-has-bg) .header .nav a,
+body:has(.home-has-bg) .header .logo a,
+body:has(.home-has-bg) .header #theme-toggle {
+    color: #ced6e2;
+}
+
+body:has(.home-has-bg) .header .nav a:hover,
+body:has(.home-has-bg) .header .logo a:hover {
+    color: #22d3ee;
+}
+
+/* 有背景图时，首屏文字用浅色；无背景图时退回主题色 */
+.home-has-bg {
+    --home-ink: #eef2f7;
+    --home-muted: #a9b4c4;
+    --home-surface: rgba(22, 27, 38, 0.72);
+    --home-line: rgba(148, 163, 184, 0.22);
+}
+
+/* 窄屏换更小的背景图（91 KB vs 262 KB），省流量也更快出图。
+   手机竖屏时把焦点往上抬一点，画面主体（伞与人物）才不会被裁掉。 */
+@media (max-width: 900px) {
+    .home-bg {
+        background-image: var(--home-bg-mobile, var(--home-bg));
+        background-position: center 28%;
+    }
+}
+
+/* 窄屏上首屏是堆叠布局（头像在上、文字在下），比桌面高得多。
+   背景图若维持 560px，淡出区就会压到第一张项目卡片上，那里的文字对比度不稳定。
+   所以窄屏把图加高，让淡出发生在卡片上方。 */
+@media (max-width: 768px) {
+    .home-bg,
+    .home::before {
+        height: 880px;
+        max-height: none;
+    }
+}
+
+/* ---------------------------------------------------------------- 首屏 */
+.home-hero {
+    display: grid;
+    grid-template-columns: 176px 1fr;
+    gap: 32px;
+    align-items: center;
+    max-width: var(--home-maxw);
+    margin: 0 auto;
+    /* 给首屏足够高度，背景图才有画面可看（否则只在导航下面露一条边）。
+       用 vh 上限，高屏上不会把卡片推得太远。 */
+    min-height: min(58vh, 500px);
+    padding: 28px 0 20px;
+}
+
+.home-avatar-wrap {
+    position: relative;
+    width: 176px;
+    height: 176px;
+}
+
+.home-avatar {
+    width: 176px;
+    height: 176px;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+    background: var(--home-surface);
+    border: 2px solid var(--home-line);
+    box-shadow: 0 18px 44px rgba(2, 6, 16, 0.5);
+}
+
+/* 头像外圈光晕：强调色，暗色下像一圈冷光 */
+.home-avatar-wrap::after {
+    content: "";
+    position: absolute;
+    inset: -10px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 50%, rgba(34, 211, 238, 0.22), transparent 62%);
+    z-index: -1;
+}
+
+.home-intro {
+    min-width: 0;
+}
+
+.home-eyebrow {
+    margin: 0 0 6px;
+    color: var(--home-accent);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.home-name {
+    margin: 0 0 12px;
+    font-size: 46px;
+    line-height: 1.1;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--home-ink);
+}
+
+.home-bio {
+    margin: 0 0 18px;
+    max-width: 62ch;
+    color: var(--home-muted);
+    font-size: 16px;
+    line-height: 1.75;
+}
+
+/* chips：邮箱 / 所在地 / 状态 */
+.home-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    list-style: none;
+    margin: 0 0 20px;
+    padding: 0;
+}
+
+.home-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 12px;
+    border: 1px solid var(--home-line);
+    border-radius: 999px;
+    background: var(--home-surface);
+    color: var(--home-muted);
+    font-size: 13.5px;
+    line-height: 1.4;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.home-chip .chip-icon {
+    width: 15px;
+    height: 15px;
+    flex: 0 0 auto;
+    color: var(--home-accent);
+}
+
+.home-chip a,
+.home-chip span {
+    color: inherit !important;
+    text-decoration: none;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* 邮箱那一条要显眼：强调色 + 可点击 */
+.home-chip-link {
+    border-color: rgba(34, 211, 238, 0.45);
+    background: rgba(34, 211, 238, 0.1);
+}
+
+.home-chip-link a {
+    color: #d6f5fb !important;
+    font-weight: 600;
+}
+
+.home-chip-link:hover {
+    border-color: var(--home-accent);
+    background: rgba(34, 211, 238, 0.18);
+}
+
+/* 一组入口按钮 */
+.home-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.home-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 16px;
+    border-radius: 10px;
+    border: 1px solid var(--home-line);
+    background: var(--home-surface);
+    color: var(--home-ink) !important;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transition: transform 0.15s ease, border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.home-link .link-icon {
+    width: 17px;
+    height: 17px;
+    color: var(--home-accent);
+}
+
+.home-link:hover {
+    transform: translateY(-2px);
+    border-color: var(--home-accent);
+    color: #ffffff !important;
+    background: rgba(34, 211, 238, 0.16);
+}
+
+/* ---------------------------------------------------------------- 区块 */
+.home-section {
+    max-width: var(--home-maxw);
+    margin: 0 auto;
+    padding: 40px 0 8px;
+}
+
+.home-section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.home-section-head h2 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    /* 写死浅色：区块标题可能落在背景图淡出区上方，不能依赖主题色 */
+    color: #e9eef5;
+    letter-spacing: -0.01em;
+}
+
+/* 标题左侧一道强调色竖线，替代大段分隔线 */
+.home-section-head h2::before {
+    content: "";
+    display: inline-block;
+    width: 4px;
+    height: 18px;
+    margin-right: 10px;
+    border-radius: 2px;
+    vertical-align: -3px;
+    background: linear-gradient(180deg, var(--home-accent), var(--home-accent-2));
+}
+
+.home-section-more {
+    color: var(--home-muted) !important;
+    font-size: 13.5px;
+    text-decoration: none;
+    border: none !important;
+    white-space: nowrap;
+}
+
+.home-section-more:hover {
+    color: var(--home-accent) !important;
+}
+
+/* ---------------------------------------------------------------- 项目卡片 */
+.home-projects {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(272px, 1fr));
+    gap: 18px;
+}
+
+.project-card {
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: var(--home-radius);
+    /* 卡片必须有足够不透明的底色：背景图虽然淡出，但卡片区与淡出区有交叠，
+       半透明底会让卡片文字压在中间调上，对比度不稳定。 */
+    background: rgba(22, 27, 37, 0.9);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.project-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(34, 211, 238, 0.55);
+    box-shadow: 0 20px 44px rgba(2, 6, 16, 0.45);
+}
+
+.project-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.project-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 11px;
+    color: var(--home-accent);
+    background: linear-gradient(140deg, rgba(34, 211, 238, 0.2), rgba(52, 211, 153, 0.12));
+    border: 1px solid rgba(34, 211, 238, 0.28);
+}
+
+.project-icon .icon {
+    width: 22px;
+    height: 22px;
+}
+
+/* 状态标签：三种状态各一套配色，类名由 data/home.yaml 的 status 决定 */
+.project-tag {
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.7;
+    white-space: nowrap;
+    border: 1px solid transparent;
+}
+
+.project-tag.status-active {
+    color: #6ee7b7;
+    background: rgba(16, 185, 129, 0.14);
+    border-color: rgba(16, 185, 129, 0.4);
+}
+
+.project-tag.status-stable {
+    color: #93c5fd;
+    background: rgba(59, 130, 246, 0.14);
+    border-color: rgba(59, 130, 246, 0.4);
+}
+
+.project-tag.status-planned {
+    color: #cbd5e1;
+    background: rgba(148, 163, 184, 0.14);
+    border-color: rgba(148, 163, 184, 0.36);
+}
+
+.project-name {
+    margin: 0 0 8px;
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+.project-name a {
+    color: var(--home-ink) !important;
+    text-decoration: none;
+    border: none !important;
+}
+
+.project-name a:hover {
+    color: var(--home-accent) !important;
+}
+
+.project-tagline {
+    margin: 0 0 12px;
+    color: var(--home-muted);
+    font-size: 14px;
+    line-height: 1.7;
+    flex: 1 1 auto;
+}
+
+.project-meta {
+    margin: 0 0 12px;
+    color: var(--home-muted);
+    font-size: 12.5px;
+    font-variant-numeric: tabular-nums;
+}
+
+.project-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    list-style: none;
+    margin: 0 0 16px;
+    padding: 0;
+}
+
+.project-tags li {
+    padding: 2px 9px;
+    border-radius: 6px;
+    background: rgba(148, 163, 184, 0.13);
+    color: var(--home-muted);
+    font-size: 11.5px;
+    line-height: 1.8;
+}
+
+.project-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    align-self: flex-start;
+    color: var(--home-accent) !important;
+    font-size: 13.5px;
+    font-weight: 600;
+    text-decoration: none;
+    border: none !important;
+}
+
+.project-link .icon-arrow {
+    width: 15px;
+    height: 15px;
+    transition: transform 0.15s ease;
+}
+
+.project-link:hover .icon-arrow {
+    transform: translateX(3px);
+}
+
+/* ---------------------------------------------------------------- 最新文章 */
+.home-posts {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: var(--home-radius);
+    /* 同卡片：实一点的不透明底，保证文字对比度不随背景变化 */
+    background: rgba(22, 27, 37, 0.9);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    overflow: hidden;
+}
+
+.post-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--home-line);
+}
+
+.post-row:last-child {
+    border-bottom: 0;
+}
+
+.post-row-title {
+    color: var(--home-ink) !important;
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+    border: none !important;
+    min-width: 0;
+}
+
+.post-row-title:hover {
+    color: var(--home-accent) !important;
+}
+
+.post-row-meta {
+    color: var(--home-muted);
+    font-size: 12.5px;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.home-content {
+    color: var(--home-muted);
+}
+
+/* ---------------------------------------------------------------- 响应式 */
+@media (max-width: 768px) {
+    .home-hero {
+        grid-template-columns: 1fr;
+        justify-items: center;
+        text-align: center;
+        gap: 20px;
+        padding-top: 32px;
+        /* 堆叠后高度由内容决定，不再抢占视口高度 */
+        min-height: 0;
+    }
+
+    .home-avatar-wrap,
+    .home-avatar {
+        width: 132px;
+        height: 132px;
+    }
+
+    .home-name {
+        font-size: 34px;
+    }
+
+    .home-bio {
+        font-size: 15px;
+    }
+
+    .home-meta,
+    .home-links {
+        justify-content: center;
+    }
+
+    .home-projects {
+        grid-template-columns: 1fr;
+    }
+
+    .post-row {
+        flex-direction: column;
+        gap: 4px;
+    }
+}
+
+/* 尊重"减少动态效果"偏好 */
+@media (prefers-reduced-motion: reduce) {
+    .home-link,
+    .project-card,
+    .project-link .icon-arrow {
+        transition: none;
+    }
+
+    .home-link:hover,
+    .project-card:hover {
+        transform: none;
+    }
+}
