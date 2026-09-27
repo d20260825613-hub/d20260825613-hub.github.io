@@ -4,21 +4,20 @@
 # 想换文字、加项目、改联系方式，只改本文件即可。
 
 profile:
-  # 昵称 / 站名（首屏大标题）
-  name: "堆栈手记"
+  # 站名（首屏大标题）
+  name: "d20260825613-hub 的个人博客"
   # 副标题：一句话说明这是谁、做什么
   role: "独立工具开发者"
-  # 个人简介：围绕 CLI 工具、开发效率、自动化脚本、网络诊断、文件整理
+  # 个人简介：大白话，普通博客的写法
   bio: >-
-    个人开源工具箱。我把日常反复遇到的麻烦写成零依赖的命令行工具 ——
-    磁盘与文件整理、网络诊断、局域网文件互传、表格处理与自动化脚本。
-    每个工具都能用 npx 直接跑，不引入第三方依赖，也不碰 eval。
-  # 头像：把真实图片放到 static/images/avatar.webp（或 .jpg/.png）即会自动使用；
-  # 没有该文件时回退到 static/images/avatar-placeholder.svg
-  avatar: "/images/avatar.webp"
+    平时写写代码，记录一些学习和折腾过程里的笔记，想到什么就更新什么。
+  # 头像：GitHub 头像已用 scripts/fetch-avatar.js 下载到本地，
+  # 本地加载、不引外链（外链在国内经常超时变成破图）。
+  # 想换头像：重跑 `node scripts/fetch-avatar.js <用户名> 512`
+  avatar: "/img/avatar.png"
   avatarFallback: "/images/avatar-placeholder.svg"
   # 头像上的首字（仅占位图使用）
-  initials: "堆"
+  initials: "d"
 
 # 联系方式：显示在首屏，邮箱可点击直接发信
 contact:

@@ -41,8 +41,8 @@
   {{- /* ---------------------------------------------------------------- 首屏 */ -}}
   <section class="home-hero">
     <div class="home-avatar-wrap">
-      {{- /* 优先用真实头像；没有该文件时回退到占位图。
-             换头像：把图片放到 static/images/avatar.webp 即可，无需改代码。 */ -}}
+      {{- /* 优先用真实头像（scripts/fetch-avatar.js 下载到 static/img/avatar.png）；
+             文件不存在时回退到占位图，模板不会因为缺图而报错。 */ -}}
       {{- $avatar := $profile.avatar }}
       {{- $fallback := $profile.avatarFallback | default "/images/avatar-placeholder.svg" }}
       {{- $avatarExists := false }}

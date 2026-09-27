@@ -10,7 +10,7 @@ baseURL: "https://d20260825613-hub.github.io/"
 # Hugo 0.158 起 languageCode 改名 locale（旧名还能用但会告警）
 locale: "zh-cn"
 defaultContentLanguage: "zh"
-title: "堆栈手记"
+title: "d20260825613-hub 的个人博客"
 theme: "PaperMod"
 
 enableRobotsTXT: true

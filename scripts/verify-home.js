@@ -43,7 +43,7 @@ const count = (re) => (home.match(re) ?? []).length;
 console.log('=== 首页结构 ===');
 check('有首屏区块 .home-hero', home.includes('class="home-hero"'));
 check('有圆形头像 .home-avatar', home.includes('class="home-avatar"'));
-check('有站名 .home-name 且内容正确', /class="home-name"[^>]*>堆栈手记</.test(home) || home.includes('堆栈手记'));
+check('有站名 .home-name 且内容正确', home.includes('d20260825613-hub 的个人博客'));
 check('有个人简介 .home-bio', home.includes('class="home-bio"'));
 check('有联系方式 chips', count(/class="home-chip/g) >= 3, `${count(/class="home-chip/g)} 个`);
 check('邮箱可点击发信', home.includes('mailto:contact@example.com'));
@@ -53,7 +53,10 @@ check('首屏只有一个 h1', count(/<h1/g) === 1, `${count(/<h1/g)} 个`);
 console.log('\n=== 视觉元素 ===');
 check('背景图已引用（桌面）', home.includes('hero-bg.jpg'));
 check('背景图已引用（移动端）', home.includes('hero-bg-mobile.jpg'));
-check('头像资源已引用', home.includes('avatar-placeholder.svg') || home.includes('avatar.webp'));
+// 头像应当是本地文件（scripts/fetch-avatar.js 下载的），不是外链 ——
+// 外链在国内经常超时，会变成破图。
+check('头像走本地文件', home.includes('/img/avatar.png') || home.includes('avatar-placeholder.svg'));
+check('没有引用外部头像', !home.includes('githubusercontent'));
 check('有内联 SVG 图标', count(/svg-icon/g) >= 12, `${count(/svg-icon/g)} 个`);
 check('图标是内联的（无外部图标请求）', home.includes('<svg class="svg-icon'), '');
 
