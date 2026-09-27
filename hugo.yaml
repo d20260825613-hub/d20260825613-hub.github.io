@@ -1,0 +1,132 @@
+# =====================================================================
+#  d20260825613-hub.github.io — 个人静态博客
+#  生成器：Hugo（单二进制，无运行时依赖）
+#  主题：PaperMod（vendored 到 themes/PaperMod，不用 submodule，CI 少一步网络依赖）
+#  部署：GitHub Actions 构建 → GitHub Pages（自动 HTTPS + Fastly CDN）
+#  公网地址：https://d20260825613-hub.github.io/
+# =====================================================================
+
+baseURL: "https://d20260825613-hub.github.io/"
+# Hugo 0.158 起 languageCode 改名 locale（旧名还能用但会告警）
+locale: "zh-cn"
+defaultContentLanguage: "zh"
+title: "堆栈手记"
+theme: "PaperMod"
+
+enableRobotsTXT: true
+enableEmoji: true
+hasCJKLanguage: true
+summaryLength: 80
+enableGitInfo: false
+
+# 中文标题直接做路径会变成百分号编码；用 slug 兜底更稳（缺省回退到文件名）
+permalinks:
+  posts: "/posts/:slug/"
+  notes: "/notes/:slug/"
+  projects: "/projects/:slug/"
+
+pagination:
+  pagerSize: 10
+  path: "page"
+
+sitemap:
+  changefreq: weekly
+  priority: 0.5
+  filename: sitemap.xml
+
+# 搜索依赖 home 的 JSON 输出（PaperMod 用 Fuse.js 在浏览器里查 index.json）
+outputs:
+  home: ["HTML", "RSS", "JSON"]
+
+markup:
+  goldmark:
+    renderer:
+      unsafe: true
+  highlight:
+    noClasses: false
+    codeFences: true
+    guessSyntax: true
+    lineNos: false
+  tableOfContents:
+    startLevel: 2
+    endLevel: 4
+    ordered: false
+
+params:
+  description: "记录工程实践、工具链与读书笔记。"
+  author: "d20260825613-hub"
+
+  # 亮/暗双主题：auto 跟随系统，右上角可手动切换并记住选择
+  defaultTheme: "auto"
+  disableThemeToggle: false
+
+  ShowReadingTime: true
+  ShowWordCount: true
+  ShowShareButtons: false
+  ShowPostNavLinks: true
+  ShowBreadCrumbs: true
+  ShowCodeCopyButtons: true
+  ShowRssButtonInSectionTermList: true
+  ShowFullTextinRSS: false
+  ShowToc: true
+  TocOpen: false
+  DateFormat: "2006-01-02"
+  hideFooter: false
+
+  homeInfoParams:
+    Title: "堆栈手记"
+    Content: |
+      这里记录工程实践、工具链和读书笔记。
+
+      - 全部文章 → 顶部「文章」
+      - 按时间浏览 → 顶部「归档」
+      - 按主题筛选 → 顶部「标签」
+      - 站内搜索 → 顶部「搜索」，或任意页面按 <kbd>/</kbd>
+
+  assets:
+    disableHLJS: true
+    favicon: "/favicon.svg"
+
+  # 文章底部评论：giscus（GitHub Discussions 驱动，无后端、无广告）
+  # 仓库公开且已开启 Discussions；两个 ID 由 https://giscus.app 生成
+  comments: true
+  giscus:
+    repo: "d20260825613-hub/d20260825613-hub.github.io"
+    repoId: "REPLACE_REPO_ID"
+    category: "Announcements"
+    categoryId: "REPLACE_CATEGORY_ID"
+    mapping: "pathname"
+    strict: "0"
+    reactionsEnabled: "1"
+    emitMetadata: "0"
+    inputPosition: "top"
+    theme: "preferred_color_scheme"
+    lang: "zh-CN"
+    loading: "lazy"
+
+  socialIcons:
+    - name: github
+      url: "https://github.com/d20260825613-hub"
+    - name: rss
+      url: "/index.xml"
+
+menu:
+  main:
+    - name: 文章
+      url: /posts/
+      weight: 10
+    - name: 笔记
+      url: /notes/
+      weight: 20
+    - name: 项目
+      url: /projects/
+      weight: 30
+    - name: 归档
+      url: /archives/
+      weight: 40
+    - name: 标签
+      url: /tags/
+      weight: 50
+    - name: 搜索
+      url: /search/
+      weight: 60

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- 站点图标：一叠"层"，呼应"堆栈手记" -->
+  <rect width="64" height="64" rx="12" fill="#1f6feb"/>
+  <g fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M16 26 L32 18 L48 26 L32 34 Z"/>
+    <path d="M16 34 L32 42 L48 34"/>
+    <path d="M16 42 L32 50 L48 42"/>
+  </g>
+</svg>

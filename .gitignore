@@ -1,0 +1,14 @@
+# 构建产物：由 CI 生成，不进版本控制
+public/
+resources/_gen/
+
+# Hugo 构建缓存
+.hugo_build.lock
+
+# 编辑器与系统
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini

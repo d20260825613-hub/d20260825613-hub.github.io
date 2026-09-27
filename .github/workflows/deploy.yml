@@ -1,0 +1,96 @@
+# 构建 Hugo 站点并发布到 GitHub Pages。
+#
+# 触发方式：推送到 main，或在 Actions 页面手动触发。
+# 权限：只需要 Pages 写入和 id-token，不需要任何自定义 secret。
+#   ——这是选 GitHub Pages 而不是第三方托管的直接好处：仓库内的流水线可以自洽运行，
+#     没有"先去某个控制台申请一个 token 再贴进 Secrets"的前置步骤。
+#
+# 部署链路：
+#   push → checkout → hugo --minify → upload-pages-artifact → deploy-pages → 线上生效
+#
+# 注意 baseURL：用 actions/configure-pages 的输出，而不是在配置里手抄域名。
+# 手抄的话，将来换自定义域名时 RSS / sitemap / og:url 会残留旧地址。
+
+name: Build and deploy site
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# 同一时间只允许一个部署；排队中的旧任务直接取消，正在跑的不打断
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    env:
+      # 钉死版本：Hugo 的小版本之间主题行为会有差异，用 latest 等于让线上构建不可复现
+      HUGO_VERSION: "0.166.0"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # 文章按 git 时间排序时需要完整历史；这里保留，方便以后开 enableGitInfo
+          fetch-depth: 0
+          # 主题已 vendored 进仓库，不需要拉 submodule
+          submodules: false
+
+      - name: Set up Pages
+        id: pages
+        uses: actions/configure-pages@v5
+
+      - name: Install Hugo
+        run: |
+          set -euo pipefail
+          echo "installing hugo ${HUGO_VERSION}"
+          curl -sSL -o hugo.tar.gz \
+            "https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_extended_${HUGO_VERSION}_linux-amd64.tar.gz"
+          mkdir -p "$HOME/.local/bin"
+          tar -xzf hugo.tar.gz -C "$HOME/.local/bin" hugo
+          chmod +x "$HOME/.local/bin/hugo"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/hugo" version
+
+      - name: Build site
+        run: |
+          set -euo pipefail
+          hugo \
+            --gc \
+            --minify \
+            --baseURL "${{ steps.pages.outputs.base_url }}/"
+
+      - name: Report build result
+        run: |
+          echo "pages: $(find public -type f | wc -l) files, $(du -sh public | cut -f1)"
+          test -f public/index.html || { echo "::error::public/index.html missing"; exit 1; }
+          test -f public/index.json || { echo "::error::public/index.json missing — search would break"; exit 1; }
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./public
+
+  deploy:
+    name: Deploy
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
