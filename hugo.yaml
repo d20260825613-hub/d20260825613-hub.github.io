@@ -88,13 +88,15 @@ params:
     favicon: "/favicon.svg"
 
   # 文章底部评论：giscus（GitHub Discussions 驱动，无后端、无广告）
-  # 仓库公开且已开启 Discussions；两个 ID 由 https://giscus.app 生成
+  # 仓库公开且已开启 Discussions。两个 ID 通过 GraphQL 取回（见 README 第五节）：
+  #   repoId     = repository.id
+  #   categoryId = discussionCategories 里 "Announcements" 的 id
   comments: true
   giscus:
     repo: "d20260825613-hub/d20260825613-hub.github.io"
-    repoId: "REPLACE_REPO_ID"
+    repoId: "R_kgDOUtmp9g"
     category: "Announcements"
-    categoryId: "REPLACE_CATEGORY_ID"
+    categoryId: "DIC_kwDOUtmp9s4DGep1"
     mapping: "pathname"
     strict: "0"
     reactionsEnabled: "1"
