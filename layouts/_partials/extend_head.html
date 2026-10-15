@@ -1,0 +1,38 @@
+{{- /*
+  <head> 自定义注入区（PaperMod 预留给站点的钩子，路径与主题同名即生效）。
+
+  只做一件事：让 README 与 hugo.yaml 里写的「任意页面按 / 唤起搜索」真的成立。
+
+  主题原本想用 <a accesskey=/> 实现，但 themes/PaperMod/layouts/_partials/
+  header.html:92 的条件 `eq (site.GetPage .KeyName).Layout "search"` 在本站恒为假，
+  产物里连 accesskey 都没输出，所以键盘快捷键一直是句空话。这里不去改主题
+  （vendored，改了就与上游分叉），改成在页面里直接监听 keydown。
+
+  约束：只在站内存在 /search/ 输出、且焦点不在输入框/可编辑区域时才接管，
+  避免用户想打「/」时被劫持。
+*/ -}}
+{{- if .Site.GetPage "/search" }}
+<script>
+  (function () {
+    var SEARCH_URL = {{ "/search/" | relURL }};
+    function isTyping(el) {
+      if (!el) return false;
+      var tag = el.tagName;
+      return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || el.isContentEditable === true;
+    }
+    document.addEventListener("keydown", function (e) {
+      if (e.key !== "/" || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (isTyping(e.target)) return;
+      var box = document.getElementById("searchInput");
+      if (box) {
+        e.preventDefault();
+        box.focus();
+        if (typeof box.select === "function") box.select();
+        return;
+      }
+      e.preventDefault();
+      location.href = SEARCH_URL;
+    });
+  })();
+</script>
+{{- end }}

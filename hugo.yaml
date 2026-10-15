@@ -85,7 +85,17 @@ params:
 
   assets:
     disableHLJS: true
+    # 图标只有一张 static/favicon.svg。PaperMod 的 head.html 会无条件输出 5 个
+    # <link rel=...>，未显式配置时用的是主题默认文件名（favicon.ico、
+    # favicon-16x16.png、favicon-32x32.png、apple-touch-icon.png、
+    # safari-pinned-tab.svg），这些文件本站并不存在 —— 每次访问都会多出 3~4 个
+    # 404 请求（iOS 还会额外请求 apple-touch-icon）。这里全部指向已有的 SVG，
+    # 宁可让尺寸/类型提示不准，也不要稳定 404。
     favicon: "/favicon.svg"
+    favicon16x16: "/favicon.svg"
+    favicon32x32: "/favicon.svg"
+    apple_touch_icon: "/favicon.svg"
+    safari_pinned_tab: "/favicon.svg"
 
   # 文章底部评论：giscus（GitHub Discussions 驱动，无后端、无广告）
   # 仓库公开且已开启 Discussions。两个 ID 通过 GraphQL 取回（见 README 第五节）：

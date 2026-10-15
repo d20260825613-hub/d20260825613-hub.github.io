@@ -60,24 +60,27 @@
 │  ├─ about.md                 → /about/
 │  ├─ search.md                → /search/（Fuse.js 站内搜索）
 │  ├─ archives.md              → /archives/（按时间归档）
-│  ├─ tags.md                  → /tags/
 │  ├─ posts/                   → /posts/   长文
 │  ├─ notes/                   → /notes/   短笔记、命令速查
 │  └─ projects/                → /projects/ 自己维护的开源工具索引
 ├─ layouts/
-│  ├─ list.html                ★ 首页模板（个人工具箱主页，见第四节）
+│  ├─ list.html                ★ 列表模板分发器（只有 .IsHome 走工具箱首页，见第四节）
 │  └─ _partials/
+│     ├─ home-main.html        ★ 首页正文（工具箱主页）
+│     ├─ list-fallback.html    栏目页 / 标签页 / 分类页的列表实现（等同主题 list.html）
+│     ├─ extend_head.html      站内搜索快捷键（按 / 唤起）
 │     ├─ comments.html         giscus 评论组件
 │     └─ svg-icon.html         内联 SVG 图标集
 ├─ assets/css/extended/home.css ★ 首页样式（PaperMod 自动合并，无需改主题）
 ├─ static/
-│  ├─ favicon.svg
-│  └─ images/
-│     ├─ hero-bg.jpg           首页背景图 1600×900
-│     ├─ hero-bg-mobile.jpg    首页背景图（窄屏 900×507）
-│     └─ avatar-placeholder.svg 占位头像（放入 avatar.webp 即自动替换）
+│  ├─ favicon.svg              站点图标（唯一的图标文件，head 里 5 处 link 都指向它）
+│  ├─ images/
+│  │  ├─ hero-bg.jpg           首页背景图 1600×900
+│  │  ├─ hero-bg-mobile.jpg    首页背景图（窄屏 900×507）
+│  │  └─ avatar-placeholder.svg 占位头像（头像文件缺失时用它兜底）
+│  └─ img/avatar.png           真实头像（data/home.yaml 的 profile.avatar 指向这里）
 ├─ scripts/
-│  ├─ verify-home.js           首页渲染验收（结构与视觉元素断言）
+│  ├─ verify-home.js           站点验收（首页结构 / 栏目页内容 / 搜索索引 / 本地资源）
 │  ├─ measure-home.js          量各元素宽度，定位横向溢出
 │  └─ cdp-viewport.js          强制真实视口测量 + 截图
 ├─ themes/PaperMod/            主题（vendored，见下文说明）
@@ -150,29 +153,44 @@ ShowToc: true
 ### 结构
 
 ```
-layouts/list.html        只覆盖 "main" 块
-├─ 背景层（取决于 data/home.yaml 是否配了图片）
-├─ 首屏 .home-hero
-│   ├─ 圆形头像 .home-avatar（真实头像缺失时回退占位 SVG）
-│   ├─ 身份标签 .home-eyebrow「独立工具开发者」
-│   ├─ 站名 .home-name「堆栈手记」
-│   ├─ 简介 .home-bio
-│   ├─ 联系方式 .home-meta（邮箱可点击发信 / 所在地 / 维护状态）
-│   └─ 入口按钮 .home-links（GitHub / 博客 / RSS / 写邮件）
-├─ 项目卡片 .home-projects（四张，网格布局，窄屏自动单列）
-└─ 最新文章 .home-posts（条数由 data/home.yaml 的 recentPosts 控制）
+layouts/list.html            列表模板分发器（只做 .IsHome 判断）
+├─ .IsHome → layouts/_partials/home-main.html   首页正文，只覆盖 "main" 块
+│  ├─ 背景层（取决于 data/home.yaml 是否配了图片）
+│  ├─ 首屏 .home-hero
+│  │   ├─ 圆形头像 .home-avatar（真实头像缺失时回退占位 SVG）
+│  │   ├─ 身份标签 .home-eyebrow「独立工具开发者」
+│  │   ├─ 站名 .home-name「堆栈手记」
+│  │   ├─ 简介 .home-bio
+│  │   ├─ 联系方式 .home-meta（邮箱可点击发信 / 所在地 / 维护状态）
+│  │   └─ 入口按钮 .home-links（GitHub / 博客 / RSS / 写邮件）
+│  ├─ 项目卡片 .home-projects（四张，网格布局，窄屏自动单列）
+│  └─ 最新文章 .home-posts（条数由 data/home.yaml 的 recentPosts 控制）
+└─ 其它 Kind → layouts/_partials/list-fallback.html   等同主题 list.html：
+   栏目页有 page-header + post-entry 列表 + 分页，标签/分类页走主题 taxonomy.html
 ```
 
-### 为什么放在 `layouts/list.html`
+### 为什么必须做 `.IsHome` 分发（踩过的坑）
 
-Hugo 的模板查找里项目 `layouts/` 优先于主题 `layouts/`，而 PaperMod 的首页渲染就在它的
-`layouts/list.html` 里（判断 `.IsHome`）。同名覆盖之后：
+Hugo 的列表模板查找里项目 `layouts/` 优先于主题 `layouts/`，而 **`.Kind` 为
+`section`（`/posts/`、`/notes/`、`/projects/`）、`taxonomy`（`/tags/`、`/categories/`）、
+`term`（`/tags/hugo/`）的页面都会回落到根级 `layouts/list.html`**。
 
-- 其余页面**完全不受影响**：文章页（`single.html`）、标签（`taxonomy.html`）、
-  搜索、归档、404 全部照旧；
+所以早期版本把首页标记直接写在 `layouts/list.html` 里是个事故：`/posts/`、`/notes/`、
+`/projects/` 与全部标签/分类页都被渲染成了首页副本 —— 栏目列表、页标题、分页一起消失
+（分页尤其隐蔽：文章超过 10 篇后，旧文章会彻底没有入口）。现在：
+
+- 只有真正的站点首页（`.IsHome`）走 `home-main.html`；
+- 其余列表页一律调用 `list-fallback.html`，长相与主题 `layouts/list.html` 完全一致
+  （`page-header` + `post-entry` + 分页），标签/分类页仍由主题 `taxonomy.html` 渲染；
+- 页面内容文件**不要**写与分类法同路径的 `url:`（例如 `content/tags.md` 配
+  `url: "/tags/"`）。Hugo 允许页面与分类法抢同一个输出路径、且静默由页面内容胜出：
+  `/tags/` 会变成一篇没有标签列表的空文章，顶部「标签」菜单随即变成死入口；
 - `themes/` 一个字节都不用改，主题升级不会与定制冲突；
-- 只定义 `main` 块，`<head>`（样式与搜索脚本）、导航、页脚仍由主题提供，
+- `list.html` 只定义 `main` 块，`<head>`（样式与搜索脚本）、导航、页脚仍由主题提供，
   所以站内搜索与导航栏的功能没有被重写。
+
+> 主题升级后如果 `themes/PaperMod/layouts/list.html` 有变化，需要把
+> `layouts/_partials/list-fallback.html` 跟着同步一次（它是那份模板的副本）。
 
 ### 内容全部在 `data/home.yaml`
 
@@ -181,13 +199,13 @@ Hugo 的模板查找里项目 `layouts/` 优先于主题 `layouts/`，而 PaperM
 | 字段 | 作用 |
 | --- | --- |
 | `profile.name` / `role` / `bio` | 站名、身份、简介 |
-| `profile.avatar` | 头像路径。**放入 `static/images/avatar.webp` 即自动生效**，无需改代码；缺失时用 `avatarFallback` |
+| `profile.avatar` | 头像路径，当前是 `/img/avatar.png`（对应 `static/img/avatar.png`）。换成别的文件就改这一行；文件不存在时自动回退到 `avatarFallback`，不会出现破图 |
 | `contact.email` | 邮箱，同时生成 `mailto:` 链接 |
 | `contact.chips` | 首屏那一排标签：邮箱 / 所在地 / 状态 |
 | `links` | 入口按钮（GitHub / 博客 / RSS / 写邮件） |
 | `projects` | 四张项目卡片：名称、一句话简介、状态、图标、仓库、元信息、分类标签 |
 | `background.image` / `imageMobile` | 背景图（桌面 / 窄屏）。留空则不显示背景 |
-| `background.overlay` | 遮罩强度，越大文字越清楚、图片越淡（默认 0.68） |
+| `background.overlay` | 遮罩强度，越大文字越清楚、图片越淡（默认 0.68；**必须写数字**，写成 `0.7 左右` 这类文本会让构建直接失败并给出明确提示，不会再静默产出失效的 CSS） |
 | `recentPosts` | 首页「最新文章」条数，`0` 表示不显示 |
 
 ### 设计决策
@@ -220,17 +238,27 @@ static/images/hero-bg.jpg          桌面版
 static/images/hero-bg-mobile.jpg   窄屏版（建议 900 宽）
 ```
 
-**换头像**（建议正方形 ≥400×400，人脸居中，webp < 200 KB）：
+**换头像**（建议正方形 ≥400×400，人脸居中，png/webp < 200 KB）：
 
 ```
-static/images/avatar.webp          放进去即可，无需改代码
+static/img/avatar.png              默认路径，换掉这个文件即可（data/home.yaml 里的
+                                   profile.avatar 指向它）
 ```
 
-改完首页后跑验收脚本（结构、视觉元素、四张卡片、搜索索引、其它页面未被破坏）：
+> `scripts/fetch-avatar.js <用户名> 512` 可以从 GitHub 头像自动下载到本地，
+> 免去手动裁图；下载后确认 `data/home.yaml` 的 `profile.avatar` 指向该文件。
+
+改完首页后跑验收脚本。它现在会断言：首页结构 / 视觉元素 / 四张卡片 / **栏目页与标签页
+的内容结构**（`/posts/` 必须是栏目列表而不是首页副本、`/tags/` 必须是标签云）、
+**搜索索引的确切条目集合**、以及**产物里引用的本地资源是否都存在**：
 
 ```bash
 node scripts/verify-home.js
 ```
+
+> 为什么断言要这么细：早期版本只检查「产物文件存在」，于是 `/posts/` 被首页模板接管、
+> `/tags/` 被一篇空文章抢占这两类事故，脚本照样报「全部通过」。
+> 新增文章后请把脚本里栏目页的条目数期望值一并更新。
 
 需要看真实窄屏效果时用 `scripts/cdp-viewport.js`：无头 Edge/Chrome
 **不接受小于约 500px 的窗口**，直接 `--window-size=390` 截图得到的是被裁过的假象
@@ -248,7 +276,7 @@ node scripts/cdp-viewport.js 390 shot.png    # 需先 hugo 构建并用本地静
 | 功能 | 实现 | 说明 |
 | --- | --- | --- |
 | 暗色/亮色双主题 | PaperMod 内置 | `defaultTheme: auto` 跟随系统；右上角可手动切换并记住选择 |
-| 站内搜索 | Fuse.js（主题内置） | 构建时输出 `public/index.json`，浏览器本地模糊匹配，零后端。任意页面按 <kbd>/</kbd> 唤起 |
+| 站内搜索 | Fuse.js（主题内置）+ `layouts/_partials/extend_head.html` | 构建时输出 `public/index.json`，浏览器本地模糊匹配，零后端。任意页面按 <kbd>/</kbd> 唤起（已在 `extend_head.html` 里实现；主题自带的 `accesskey` 机制在本站不生效，详见第七节） |
 | 评论 | giscus | 数据存在本仓库的 GitHub Discussions，无广告无追踪。**需要一次性安装 giscus App，见下节** |
 | 目录 / 代码复制 / 阅读时长 | PaperMod 内置 | 每篇可用 front matter 单独关闭 |
 | RSS / sitemap | Hugo 内置 | `/index.xml`、`/sitemap.xml` |
@@ -304,9 +332,13 @@ giscus 需要一个 GitHub App 授权（这是 GitHub 的机制，任何基于 D
 | 评论不显示 | giscus App 未安装，或两个 ID 还是占位符 |
 | **改了 `assets/` 里的 CSS 但页面没变** | **Hugo 资源缓存**。清 `%LOCALAPPDATA%\hugo_cache` 再构建；`--gc` 与删 `public/` 都不管用 |
 | 首页背景图不显示 | `data/home.yaml` 的 `background.image` 路径不对，或文件不在 `static/images/`。模板会检查文件是否存在，不存在就整层跳过（不会产生 404 请求） |
-| 首页头像还是占位图 | `static/images/avatar.webp` 不存在。放进去即自动生效，无需改代码 |
+| 首页头像还是占位图 | `data/home.yaml` 的 `profile.avatar`（当前 `/img/avatar.png`，即 `static/img/avatar.png`）指向的文件不存在。文件放好或改对路径即生效 |
+| 首页背景遮罩没生效 / 构建报 `background.overlay 必须是 0~1 之间的数字` | 遮罩值必须是数字。写成 `0.7 左右` 这类文本时模板会直接让构建失败（这是有意的：CSS 里非法值会静默丢弃整条 `background`，比构建失败更难查） |
 | 首页在亮色主题下仍是深色 | **有意设计**，见第四节「设计决策」。想跟随主题就删掉 `.home` 顶部那段变量覆盖 |
-| 首页文字压在背景图上不好读 | 调大 `data/home.yaml` 的 `background.overlay`（如 `0.8`），或清空 `background.image` 关掉背景 |
+| 首页文字压在背景图上不好读 | 调大 `data/home.yaml` 的 `background.overlay`（如 `0.8`，超出 `[0,1]` 会被自动夹住），或清空 `background.image` 关掉背景 |
+| 栏目页（`/posts/` 等）变成首页的样子 | `layouts/list.html` 丢了 `.IsHome` 分发。栏目/标签/分类页都会回落到根级 `layouts/list.html`，它必须把非首页分支交给 `layouts/_partials/list-fallback.html` |
+| `/tags/` 变成一篇没有标签列表的空文章 | 有 `content/` 下的页面写了 `url: "/tags/"`，与分类法抢输出路径且静默胜出。删掉那个 `url:`（或那个文件），让 PaperMod 的 `taxonomy.html` 去渲染它 |
+| 按 <kbd>/</kbd> 没反应 | `layouts/_partials/extend_head.html` 没被读到（项目 `layouts/` 是否覆盖生效）。快捷键由这里的脚本实现，**不要**指望主题的 `accesskey`：`themes/PaperMod/layouts/_partials/header.html` 里 `eq (site.GetPage .KeyName).Layout "search"` 在本站恒为假，菜单项上连 `accesskey` 都不会输出 |
 
 ---
 
@@ -315,9 +347,13 @@ giscus 需要一个 GitHub App 授权（这是 GitHub 的机制，任何基于 D
 - **发文章**：`hugo new content posts/xxx.md` → 写 → `git push`
 - **改首页内容**：编辑 `data/home.yaml`（个人信息、联系方式、项目卡片）；样式在
   `assets/css/extended/home.css`
-- **改首页背景 / 头像**：替换 `static/images/hero-bg.jpg`、`hero-bg-mobile.jpg`、
-  `avatar.webp`，文件名不变即可，无需改代码
-- **改完首页跑验收**：`node scripts/verify-home.js`
+- **改首页背景 / 头像**：背景替换 `static/images/hero-bg.jpg`、`hero-bg-mobile.jpg`；
+  头像替换 `static/img/avatar.png`（或改 `data/home.yaml` 的 `profile.avatar` 指向新文件）
+- **改完首页跑验收**：`node scripts/verify-home.js`（首页结构 + 栏目页/标签页结构 +
+  搜索索引条目 + 本地资源引用，全部断言到具体内容，不是"文件存在"）
+- **新增文章后**：把 `scripts/verify-home.js` 里栏目页条目数与搜索索引期望集合更新一次
+- **改列表页长相**：`layouts/_partials/list-fallback.html`（等同主题 `list.html`）。
+  改完务必确认 `/posts/` 仍是栏目列表：它要有 `page-header` 与 `post-entry`
 - **改站点信息**：编辑 `hugo.yaml`（站名、简介、菜单、社交链接）
 - **改导航菜单**：`hugo.yaml` 里的 `menu.main`，`weight` 决定顺序
 - **升级 Hugo**：改 `deploy.yml` 里的 `HUGO_VERSION`，本地用同版本验证后再推
